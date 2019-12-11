@@ -1,9 +1,14 @@
+# dataset
 dataset/
+
+# spark
 spark-etl/project/boot/
 spark-etl/project/plugins/project/
 spark-etl/project/project/
 spark-etl/.idea
 
 **/target/
-
 *.jar
+
+#model
+model/.venv/
