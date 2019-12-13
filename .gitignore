@@ -12,3 +12,6 @@ spark-etl/.idea
 
 #model
 model/.venv/
+
+#mysql
+mysql/data/

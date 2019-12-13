@@ -1,4 +1,5 @@
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 
@@ -27,20 +28,51 @@ object yelpApp {
                         .json(currentDirectory + "/../dataset/yelp_academic_dataset_review.json")
 
     val positiveReviewDF = reviewDF.where(col("stars") > 4)
+
     val groupByUserDF = positiveReviewDF.groupBy("user_id")
-      .agg(count("business_id").as("length"), collect_list("business_id").as("business_ids"))
+      .agg(count("business_id").as("length"), collect_set("business_id").as("business_ids_list"))
+    val filteredReviewCount = groupByUserDF.where(col("length") > 5)
 
-    val trainDF = groupByUserDF.where(col("length") > 5).cache()
-    trainDF.show(truncate=false)
-    println("total user count: " + trainDF.count())
+    //groupByUserDF.show(truncate=false)
+    println("total user count: " + groupByUserDF.count())
 
-    val explodedDF = trainDF.select(col("user_id"), explode(col("business_ids")).as("business_id")).cache()
-    explodedDF.show(truncate=false)
+    val explodedDF = filteredReviewCount.select(col("user_id"), explode(col("business_ids_list")).as("business_id")).cache()
+    //explodedDF.show(truncate=false)
     println(explodedDF.count())
 
-    val groupByBusiness = explodedDF.groupBy("business_id").agg(count("user_id").as("length"), collect_list("user_id"))
-    val filteredReviewCount = groupByBusiness.where(col("length") > 3)
-    filteredReviewCount.show(truncate=false)
-    println("total business_id count: " + filteredReviewCount.count())
+    explodedDF.write.format("jdbc")
+      .option("url", "jdbc:mysql://localhost:3306/yelp")
+      .option("dbtable", "data")
+      .option("user", "root")
+      .option("password", "example")
+      .option("createTableColumnTypes", "user_id VARCHAR(128), business_id VARCHAR(128)")
+      .mode("overwrite")
+      .save()
+
+    val usersDF = explodedDF.select("user_id").distinct
+    val usersWitSeqDF = usersDF.withColumn("seq", monotonically_increasing_id())
+    usersWitSeqDF.show()
+
+    usersWitSeqDF.write.format("jdbc")
+      .option("url", "jdbc:mysql://localhost:3306/yelp")
+      .option("dbtable", "users")
+      .option("user", "root")
+      .option("password", "example")
+      .option("createTableColumnTypes", "user_id VARCHAR(128)")
+      .mode("overwrite")
+      .save()
+
+    val businessesDF = explodedDF.select("business_id").distinct
+    val businessesWithSeqDF = businessesDF.withColumn("seq", monotonically_increasing_id())
+    businessesWithSeqDF.show()
+
+    businessesWithSeqDF.write.format("jdbc")
+      .option("url", "jdbc:mysql://localhost:3306/yelp")
+      .option("dbtable", "business_ids")
+      .option("user", "root")
+      .option("password", "example")
+      .option("createTableColumnTypes", "business_id VARCHAR(128)")
+      .mode("overwrite")
+      .save()
   }
 }
