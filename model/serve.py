@@ -1,9 +1,8 @@
-import jsonify as jsonify
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 
 def get_api_server():
-    app = Flask()
+    app = Flask(__name__)
 
     version = 'v1.0'
 
@@ -16,7 +15,7 @@ def get_api_server():
     def info():
         return jsonify({'server info': info})
 
-    @app.route("/business2businesses", methods=['POST'])
+    @app.route("/b2b", methods=['POST'])
     def get_item2item():
         content = request.json
         business_id = content['business_id']
@@ -33,7 +32,7 @@ def get_api_server():
 
 def serve():
     api_server = get_api_server()
-    api_server.run(host='0.0.0.0', debug=True)
+    api_server.run(host='0.0.0.0', port=5000, debug=True)
 
 
 if __name__ == '__main__':
