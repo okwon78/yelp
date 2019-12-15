@@ -16,11 +16,12 @@ def get_api_server():
     def info():
         return jsonify({'server info': info})
 
-    @app.route("/item2item", methods=['POST'])
+    @app.route("/business2businesses", methods=['POST'])
     def get_item2item():
         content = request.json
         business_id = content['business_id']
 
+        # DL 모델 학습을 하지 못해서 데이터를 가지고 오는 부분을 구현하지 못했습니다.
         response = {
             'business_id': business_id,
             'recommended_business_ids': []
