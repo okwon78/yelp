@@ -50,10 +50,9 @@ object yelpApp {
       .save()
 
     val usersDF = explodedDF.select("user_id").distinct
-    val usersWitSeqDF = usersDF.withColumn("seq", monotonically_increasing_id())
-    usersWitSeqDF.show()
+    usersDF.show()
 
-    usersWitSeqDF.write.format("jdbc")
+    usersDF.write.format("jdbc")
       .option("url", "jdbc:mysql://localhost:3306/yelp")
       .option("dbtable", "users")
       .option("user", "root")
@@ -63,10 +62,9 @@ object yelpApp {
       .save()
 
     val businessesDF = explodedDF.select("business_id").distinct
-    val businessesWithSeqDF = businessesDF.withColumn("seq", monotonically_increasing_id())
-    businessesWithSeqDF.show()
+    businessesDF.show()
 
-    businessesWithSeqDF.write.format("jdbc")
+    businessesDF.write.format("jdbc")
       .option("url", "jdbc:mysql://localhost:3306/yelp")
       .option("dbtable", "business_ids")
       .option("user", "root")

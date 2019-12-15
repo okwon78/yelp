@@ -1,12 +1,13 @@
 import logging
 from tensorflow.keras import Input, Model
-from tensorflow.keras.layers import Dense, Embedding, Dot, Flatten
+from tensorflow.keras.layers import Dense, Embedding, dot, Flatten
 from tensorflow.keras.optimizers import Adam
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
-from tensorflow.initializers import RandomNormal
+import tensorflow as tf
 
-from tqdm import tqdm
+from DataGenerator import DataGenerator
+from mysql_client import mysql_client
 
 
 class Business2Vec:
@@ -14,50 +15,72 @@ class Business2Vec:
         self.model = None
         self.train_generator = None
         self.validation_generator = None
-        self.trained_weights_pat = "./weights"
+        self.trained_weights_path = "./weights"
 
-    def build(self, vector_dim, business_size, learn_rate):
+        self.mysql_client = mysql_client()
+        self.mysql_client.init()
+        self.business_size = self.mysql_client.total_businesses
+
+    def build(self, vector_dim, learn_rate):
         stddev = 1.0 / vector_dim
-        initializer = RandomNormal(mean=0.0, stddev=stddev, seed=None)
+        initializer = tf.random_normal_initializer(mean=0.0, stddev=stddev, seed=None)
 
         business_input = Input(shape=(1,), name="business_input")
-        business_emnbedding = Embedding(input_dim=business_size,
+        business_emnbedding = Embedding(input_dim=self.business_size,
                                         output_dim=vector_dim,
                                         input_length=1,
                                         name="business_embedding",
                                         embeddings_initializer=initializer)(business_input)
 
         target_input = Input(shape=(1,), name="business_target")
-        target_embedding = Embedding(input_dim=business_size,
+        target_embedding = Embedding(input_dim=self.business_size,
                                      output_dim=vector_dim,
                                      input_length=1,
                                      name="target_embedding", embeddings_initializer=initializer)(target_input)
 
-        merged = Dot([business_emnbedding, target_embedding], axes=2, normalize=False, name="dot")
+        merged = dot([business_emnbedding, target_embedding], axes=2, normalize=False, name="dot")
         merged = Flatten()(merged)
         output = Dense(1, activation='sigmoid', name="output")(merged)
 
         model = Model(inputs=[business_input, target_input], outputs=output)
         model.compile(loss="binary_crossentropy", optimizer=Adam(learn_rate), metrics=['accuracy'])
 
+        logging.info(model.summary())
+
         self.model = model
 
-    def create_generator(self):
-        pass
+        # self.model.load_weights(self.trained_weights_path)
 
-    def train(self, epochs, steps_per_epoch, validation_steps):
+    def __create_generator(self):
+        train_start_seq = self.mysql_client.train_start_seq
+        train_end_seq = self.mysql_client.train_end_seq
+
+        validation_start_seq = self.mysql_client.validation_start_seq
+        validation_end_seq = self.mysql_client.validation_end_seq
+
+        self.train_generator = DataGenerator(train_start_seq, train_end_seq, mysql_client=self.mysql_client)
+        self.validation_generator = DataGenerator(validation_start_seq, validation_end_seq, mysql_client=self.mysql_client)
+
+    def train(self):
         logging.info("Training model")
+
+        self.__create_generator()
 
         cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path,
                                           monitor='val_loss',
                                           save_best_only=True,
                                           mode='auto')
 
-        self.model.fit_generator(self.train_generator,
-                                 steps_per_epoch=steps_per_epoch,
-                                 epochs=epochs,
+        self.model.fit_generator(generator=self.train_generator,
                                  validation_data=self.validation_generator,
-                                 validation_steps=validation_steps,
+                                 # use_multiprocessing=True,
+                                 # workers=4,
                                  callbacks=[cb_checkpointer])
 
         self.model.load_weights(self.trained_weights_path)
+
+
+if __name__ is '__main__':
+    b2v = Business2Vec()
+    b2v.build(vector_dim=10, learn_rate=0.1)
+    b2v.train()
