@@ -2,7 +2,7 @@ import logging
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import Dense, Embedding, dot, Flatten
 from tensorflow.keras.optimizers import Adam
-from tensorflow.python.keras.callbacks import ModelCheckpoint
+from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 import tensorflow as tf
 
@@ -66,16 +66,18 @@ class Business2Vec:
 
         self.__create_generator()
 
-        cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path,
+        checkpointer = ModelCheckpoint(filepath=self.trained_weights_path,
                                           monitor='val_loss',
                                           save_best_only=True,
                                           mode='auto')
+        1
+        earlystopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
 
         self.model.fit_generator(generator=self.train_generator,
                                  validation_data=self.validation_generator,
                                  # use_multiprocessing=True,
                                  # workers=4,
-                                 callbacks=[cb_checkpointer])
+                                 callbacks=[checkpointer, earlystopping])
 
         self.model.load_weights(self.trained_weights_path)
 
