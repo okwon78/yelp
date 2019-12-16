@@ -9,7 +9,7 @@ def get_api_server(inverted_index_file="./inverted_index.json"):
     version = 'v1.0'
 
     info = {
-        'name': 'yelp recsys api',
+        'name': 'yelp crm api',
         'version': version
     }
 
