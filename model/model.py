@@ -16,6 +16,7 @@ from mysql_client import mysql_client
 from annoy import AnnoyIndex
 from tqdm import tqdm
 
+
 class Business2Vec:
     def __init__(self):
         self.model = None
@@ -121,7 +122,7 @@ class Business2Vec:
 
             json.dump(self.business_embeddings, fp)
 
-    def calc_knn_annoy(self, top_k):
+    def calc_knn_annoy(self, top_k=5):
         """
         1. build annoy tree to compute k nearest neighbors
         2. saves top k nearest neighbors using annoy into inverted_index
