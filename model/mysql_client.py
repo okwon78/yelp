@@ -86,13 +86,12 @@ class mysql_client:
             x = self.business_index[selected[0]]
             y = self.business_index[selected[1]]
 
-            assert(x != y)
+            assert (x != y)
 
             X.append(x)
             Y.append(y)
 
         return X, Y
-
 
 
 if __name__ is '__main__':

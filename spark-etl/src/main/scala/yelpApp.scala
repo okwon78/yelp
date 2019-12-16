@@ -10,7 +10,7 @@ object yelpApp {
 
     println(currentDirectory)
     val spark = SparkSession.builder
-      .appName("apmalPopularPrdApp")
+      .appName("yelpApp")
       .master("local[4]").getOrCreate()
 
     spark.sparkContext.setLogLevel("ERROR")
