@@ -18,8 +18,8 @@ class DataGenerator(Sequence):
 
     def __len__(self):
         batch_size = int(np.floor(self.total_users / self.batch_size))
-        #return batch_size
-        return 3
+        return batch_size
+        # return 3
 
     def __getitem__(self, index):
         start_user_seq = self.start_seq + (index * self.batch_size)
