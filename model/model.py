@@ -1,8 +1,11 @@
 import logging
+import os
+
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import Dense, Embedding, dot, Flatten
 from tensorflow.keras.optimizers import Adam
 from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.models import load_model
 
 import tensorflow as tf
 
@@ -15,11 +18,14 @@ class Business2Vec:
         self.model = None
         self.train_generator = None
         self.validation_generator = None
-        self.trained_weights_path = "./weights"
+        self.trained_weights_path = './weights/best.hdf5'
 
         self.mysql_client = mysql_client()
         self.mysql_client.init()
         self.business_size = self.mysql_client.total_businesses
+
+        if not os.path.exists('./weights'):
+            os.mkdir('./weights')
 
     def build(self, vector_dim, learn_rate):
         stddev = 1.0 / vector_dim
@@ -47,9 +53,10 @@ class Business2Vec:
 
         logging.info(model.summary())
 
-        self.model = model
+        if os.path.exists(self.trained_weights_path):
+            model.load_weights(self.trained_weights_path)
 
-        # self.model.load_weights(self.trained_weights_path)
+        self.model = model
 
     def __create_generator(self):
         train_start_seq = self.mysql_client.train_start_seq
@@ -58,31 +65,34 @@ class Business2Vec:
         validation_start_seq = self.mysql_client.validation_start_seq
         validation_end_seq = self.mysql_client.validation_end_seq
 
-        self.train_generator = DataGenerator(train_start_seq, train_end_seq, mysql_client=self.mysql_client)
-        self.validation_generator = DataGenerator(validation_start_seq, validation_end_seq, mysql_client=self.mysql_client)
+        self.train_generator = DataGenerator(train_start_seq, train_end_seq)
+        self.validation_generator = DataGenerator(validation_start_seq, validation_end_seq)
 
-    def train(self):
+    def train(self, epochs):
         logging.info("Training model")
 
         self.__create_generator()
 
-        checkpointer = ModelCheckpoint(filepath=self.trained_weights_path,
-                                          monitor='val_loss',
-                                          save_best_only=True,
-                                          mode='auto')
-        1
+        if os.path.exists(self.trained_weights_path):
+            self.model = load_model(self.trained_weights_path)
+
+        checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True, mode='auto')
         earlystopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
 
         self.model.fit_generator(generator=self.train_generator,
                                  validation_data=self.validation_generator,
-                                 # use_multiprocessing=True,
+                                 epochs=epochs,
+                                 # use_multiprocessing=False,
                                  # workers=4,
-                                 callbacks=[checkpointer, earlystopping])
+                                 callbacks=[
+                                     checkpointer,
+                                     earlystopping
+                                 ])
 
         self.model.load_weights(self.trained_weights_path)
 
 
 if __name__ is '__main__':
     b2v = Business2Vec()
-    b2v.build(vector_dim=10, learn_rate=0.1)
-    b2v.train()
+    b2v.build(vector_dim=5, learn_rate=0.1)
+    b2v.train(2)

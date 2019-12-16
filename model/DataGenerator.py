@@ -1,20 +1,25 @@
 from tensorflow.keras.utils import Sequence
 import numpy as np
 
+from mysql_client import mysql_client
+
 
 class DataGenerator(Sequence):
-    def __init__(self, start_seq, end_seq, mysql_client, batch_size=100):
-        self.mysql_client = mysql_client
+    def __init__(self, start_seq, end_seq, batch_size=100):
+        self.mysql_client = mysql_client()
+        self.mysql_client.init()
+
         self.batch_size = batch_size
 
         self.total_users = end_seq - start_seq
         self.start_seq = start_seq
         self.end_seq = end_seq
-        self.total_businesses = mysql_client.total_businesses
+        self.total_businesses = self.mysql_client.total_businesses
 
     def __len__(self):
         batch_size = int(np.floor(self.total_users / self.batch_size))
-        return batch_size
+        #return batch_size
+        return 3
 
     def __getitem__(self, index):
         start_user_seq = self.start_seq + (index * self.batch_size)
